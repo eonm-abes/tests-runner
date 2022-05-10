@@ -1,25 +1,29 @@
 use std::fmt::Debug;
+use crate::tests_runner::RunResult;
 
 #[macro_export]
 macro_rules! test {
-    ($level:expr, $($cb:expr)*) => {
-        Box::new(Test::new($level, $($cb)*))
+    (critical, $($cb:expr)*) => {
+        Box::new(Test::new(Criticality::Critical, $($cb)*))
+    };
+    (normal, $($cb:expr)*) => {
+        Box::new(Test::new(Criticality::Normal, $($cb)*))
     };
     ($cb:expr) => {
-        Box::new(Test::new(TestLevel::default(), $cb))
+        Box::new(Test::new(Criticality::default(), $cb))
     };
 }
 
 #[derive(Clone)]
 /// A test
 pub struct Test<T> {
-    pub result: Option<TestResult>,
-    pub level: TestLevel,
+    pub result: Option<RunResult>,
+    pub level: Criticality,
     pub cb: fn(&T) -> TestResult,
 }
 
 impl<T> Test<T> {
-    pub fn new(level: TestLevel, cb: fn(&T) -> TestResult) -> Test<T> {
+    pub fn new(level: Criticality, cb: fn(&T) -> TestResult) -> Test<T> {
         Test {
             result: None,
             level,
@@ -40,54 +44,65 @@ impl<T> Debug for Test<T> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TestResult {
-    pub issue: TestIssue,
+    pub status: TestStatus,
 }
 
+
 #[derive(Debug, Clone, PartialEq)]
-pub enum TestIssue {
+pub enum TestStatus {
     Passed,
     Failed,
     Skipped,
     Aborted,
 }
 
-#[derive(Debug, Clone)]
-pub enum TestLevel {
+#[derive(Debug, Clone, Copy)]
+/// Represents the Criticality of a test or a group of tests
+pub enum Criticality {
     // If a critical test fails, the test suite is aborted
     Critical,
     Normal,
 }
 
-impl Default for TestLevel {
+impl Default for Criticality {
     fn default() -> Self {
-        TestLevel::Normal
+        Criticality::Normal
     }
 }
 
 pub trait TestTrait<T> {
-    fn run(&mut self, data: &T) -> TestResult;
-    fn level(&self) -> TestLevel;
-    fn set_issue(&mut self, issue: TestIssue);
-    fn result(&self) -> Option<TestResult>;
+    fn run(&mut self, data: &T) -> RunResult;
+    fn criticality(&self) -> Criticality;
+    fn set_status(&mut self, issue: TestStatus);
+    fn status(&self) -> Option<TestStatus>;
+    fn result(&self) -> Option<RunResult>;
 }
 
 impl<T> TestTrait<T> for Test<T> {
-    fn run(&mut self, data: &T) -> TestResult {
+    fn run(&mut self, data: &T) -> RunResult {
         let result = (self.cb)(data);
 
-        self.result = Some(result.clone());
-        result
+        self.result = Some(RunResult::TestResult(result.clone()));
+        RunResult::TestResult(result)
     }
 
-    fn level(&self) -> TestLevel {
-        self.level.clone()
+    fn criticality(&self) -> Criticality {
+        self.level
     }
 
-    fn set_issue(&mut self, issue: TestIssue) {
-        self.result = Some(TestResult { issue });
+    fn set_status(&mut self, issue: TestStatus) {
+        self.result = Some(RunResult::TestResult(TestResult { status: issue }));
     }
 
-    fn result(&self) -> Option<TestResult> {
+    fn result(&self) -> Option<RunResult> {
         self.result.clone()
     }
+
+    fn status(&self) -> Option<TestStatus> {
+        self.result
+            .as_ref()
+            .map(|r| r.status())
+            .flatten()
+    }
+    
 }

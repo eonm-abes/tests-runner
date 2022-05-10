@@ -1,21 +1,21 @@
 mod tests;
+mod tests_group;
 mod tests_runner;
-mod tests_suite;
 
 pub use crate::tests_runner::*;
 pub use tests::*;
-pub use tests_suite::*;
+pub use tests_group::*;
 
 #[cfg(test)]
 mod t {
     use super::*;
     #[test]
     fn tests_runner_should_run_tests() {
-        let mut runner = TestRunner::new(());
+        let mut runner = TestRunner::new(&());
 
-        let test = test!(TestLevel::Critical, |_data| {
+        let test = test!(critical, |_data| {
             TestResult {
-                issue: TestIssue::Passed,
+                status: TestStatus::Passed,
             }
         });
 
@@ -25,11 +25,11 @@ mod t {
         let results = runner.run();
 
         let expected = vec![
-            Some(TestResult {
-                issue: TestIssue::Passed,
+            RunResult::TestResult(TestResult {
+                status: TestStatus::Passed,
             }),
-            Some(TestResult {
-                issue: TestIssue::Passed,
+            RunResult::TestResult(TestResult {
+                status: TestStatus::Passed,
             }),
         ];
 
@@ -38,19 +38,19 @@ mod t {
 
     #[test]
     fn should_abort_on_critical_test_failure() {
-        let mut runner = TestRunner::new(());
+        let mut runner = TestRunner::new(&());
 
         let test_1 = test! {
-            TestLevel::Critical,
+            critical,
             |_data| TestResult {
-                issue: TestIssue::Failed,
+                status: TestStatus::Failed,
             }
         };
 
         let test_2 = test! {
-            TestLevel::Normal,
+            critical,
             |_data| TestResult {
-                issue: TestIssue::Passed,
+                status: TestStatus::Passed,
             }
         };
 
@@ -59,31 +59,73 @@ mod t {
 
         let results = runner.run();
 
-        let expected_results = vec![
-            Some(TestResult {
-                issue: TestIssue::Failed,
+        let expected = vec![
+            RunResult::TestResult(TestResult {
+                status: TestStatus::Failed,
             }),
-            Some(TestResult {
-                issue: TestIssue::Aborted,
-            }),
+            RunResult::TestResult(TestResult {
+                status: TestStatus::Aborted,
+            })
         ];
+            
 
-        assert_eq!(results, expected_results);
+        assert_eq!(results, expected);
     }
 
     #[test]
     fn should_run_tests_suite() {
-        let suite = test_suite! {
-            TestLevel::Critical,
+        let suite = test_group! {
+            Criticality::Critical,
             |_data| TestResult {
-                issue: TestIssue::Passed,
+                status: TestStatus::Passed,
             },
             |_data| TestResult {
-                issue: TestIssue::Passed,
+                status: TestStatus::Passed,
             }
         };
 
-        let mut tests_runner = TestRunner::new(());
+        let mut tests_runner = TestRunner::new(&());
+
+        tests_runner.add_test(suite.clone());
+        tests_runner.add_test(suite);
+
+        let results = tests_runner.run();
+
+        let expected = vec![
+            RunResult::GroupResult(vec![
+                TestResult {
+                    status: TestStatus::Passed,
+                },
+                TestResult {
+                    status: TestStatus::Passed,
+                },
+            ]),
+            RunResult::GroupResult(vec![
+                TestResult {
+                    status: TestStatus::Passed,
+                },
+                TestResult {
+                    status: TestStatus::Passed,
+                },
+            ]),
+        ];
+
+        assert_eq!(results, expected);
+    }
+
+    #[test]
+    fn should_abort_on_critical_test_failure_in_suite() {
+        let suite = test_group! {
+            Criticality::Critical,
+            |_data| TestResult {
+                status: TestStatus::Failed,
+            },
+            |_data| TestResult {
+                status: TestStatus::Passed,
+            }
+        };
+
+        let mut tests_runner = TestRunner::new(&());
 
         tests_runner.add_test(suite.clone());
         tests_runner.add_test(suite);
@@ -91,43 +133,22 @@ mod t {
         let results = tests_runner.run();
 
         let expected_results = vec![
-            Some(TestResult {
-                issue: TestIssue::Passed,
-            }),
-            Some(TestResult {
-                issue: TestIssue::Passed,
-            }),
-        ];
-
-        assert_eq!(results, expected_results);
-    }
-
-    #[test]
-    fn should_abort_on_critical_test_failure_in_suite() {
-        let suite = test_suite! {
-            TestLevel::Critical,
-            |_data| TestResult {
-                issue: TestIssue::Failed,
-            },
-            |_data| TestResult {
-                issue: TestIssue::Passed,
-            }
-        };
-
-        let mut tests_runner = TestRunner::new(());
-
-        tests_runner.add_test(suite);
-        //tests_runner.add_test(Box::new(suite));
-
-        let results = tests_runner.run();
-
-        let expected_results = vec![
-            Some(TestResult {
-                issue: TestIssue::Failed,
-            }),
-            Some(TestResult {
-                issue: TestIssue::Aborted,
-            }),
+            RunResult::GroupResult(vec![
+                TestResult {
+                    status: TestStatus::Failed,
+                },
+                TestResult {
+                    status: TestStatus::Aborted,
+                },
+            ]),
+            RunResult::GroupResult(vec![
+                TestResult {
+                    status: TestStatus::Aborted,
+                },
+                TestResult {
+                    status: TestStatus::Aborted,
+                },
+            ]),
         ];
 
         assert_eq!(results, expected_results);
