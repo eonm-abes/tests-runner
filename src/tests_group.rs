@@ -11,7 +11,7 @@ macro_rules! test_group {
     };
 
     (critical: $($test:expr),*) => {
-        test_group!(crate::tests::Criticality::Critical => $($test),*);
+        test_group!(crate::tests::Criticality::Critical => $($test),*)
     };
 
     ($criticality:expr => $($test:expr),*) => {

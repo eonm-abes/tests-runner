@@ -23,23 +23,12 @@ impl<'a, T> TestRunner<'a, T> {
 
         for test in &mut self.tests {
             if !abort {
-                let _result = test.run(self.data);
+                test.run(self.data);
                 abort = test.should_abort();
             } else {
-                eprintln!("aborting test {:?}", test.status());
-
                 test.set_status(TestStatus::Aborted);
-                eprintln!("aborting test {:?}", test.status());
             }
         }
-
-        eprintln!(
-            "{:?}",
-            self.tests
-                .iter()
-                .map(|test| test.result())
-                .collect::<Vec<Option<RunResult>>>()
-        );
 
         self.tests.iter().flat_map(|test| test.result()).collect()
     }
