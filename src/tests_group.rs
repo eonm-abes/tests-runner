@@ -1,25 +1,29 @@
-use crate::{test, RunResult, TestResult};
 use crate::{
     tests::{Criticality, Test, TestStatus, TestTrait},
     tests_runner,
 };
+use crate::{RunResult, TestResult};
 
 #[macro_export]
 macro_rules! test_group {
-    ($criticality:expr, $($test:expr),*) => {
+    (normal: $($test:expr),*) => {
+        test_group!(crate::tests::Criticality::Normal => $($test),*)
+    };
+
+    (critical: $($test:expr),*) => {
+        test_group!(crate::tests::Criticality::Critical => $($test),*);
+    };
+
+    ($criticality:expr => $($test:expr),*) => {
         {
-            let mut group = TestGroup::new($criticality);
+            let mut group = crate::tests_group::TestGroup::new($criticality);
 
             $(
-                group.add_test(*test!($test));
+                group.add_test(*$test);
             )*
 
             Box::new(group)
         }
-    };
-
-    ($($test:expr)*) => {
-        test_group!(Testcriticality::default() => $($test)*)
     };
 }
 
@@ -66,17 +70,23 @@ impl<T: Clone + 'static> TestTrait<T> for TestGroup<T> {
         }
 
         self.result = Some(RunResult::GroupResult(results.clone()));
-        return RunResult::GroupResult(results);
+        RunResult::GroupResult(results)
     }
 
     fn criticality(&self) -> Criticality {
-        self.criticality.clone()
+        self.criticality
     }
 
-    fn set_status(&mut self, issue: TestStatus) {
-        for test in &mut self.tests {
-            test.set_status(issue.clone());
-        }
+    fn set_status(&mut self, status: TestStatus) {
+        self.result = Some(RunResult::GroupResult(
+            self.tests
+                .clone()
+                .into_iter()
+                .map(|_t| TestResult {
+                    status: status.clone(),
+                })
+                .collect(),
+        ))
     }
 
     fn result(&self) -> Option<RunResult> {
@@ -84,6 +94,249 @@ impl<T: Clone + 'static> TestTrait<T> for TestGroup<T> {
     }
 
     fn status(&self) -> Option<TestStatus> {
-        self.result.as_ref().map(|r| r.status()).flatten()
+        self.result.as_ref().and_then(|r| r.status())
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use crate::test;
+
+    #[test]
+    fn test_single_group_run() {
+        let group = test_group!(
+            normal:
+                test!(
+                    critical:
+                    |_data| {
+                        TestResult {
+                            status: TestStatus::Passed,
+                        }
+                    }
+                ),
+            test!(
+                critical:
+                |_data| {
+                    TestResult {
+                        status: TestStatus::Passed,
+                    }
+                }
+            )
+        );
+
+        let mut tests_runner = tests_runner::TestRunner::new(&());
+        tests_runner.add_test(group);
+
+        let result = tests_runner.run();
+
+        let expected = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Passed,
+            },
+            TestResult {
+                status: TestStatus::Passed,
+            },
+        ]);
+
+        assert_eq!(result, vec![expected]);
+    }
+
+    #[test]
+    fn test_multiple_groups_run() {
+        let group_1 = test_group!(
+            normal:
+                test!(
+                    critical:
+                    |_data| {
+                        TestResult {
+                            status: TestStatus::Passed,
+                        }
+                    }
+                ),
+            test!(
+                critical:
+                |_data| {
+                    TestResult {
+                        status: TestStatus::Passed,
+                    }
+                }
+            )
+        );
+
+        let group_2 = group_1.clone();
+
+        let mut tests_runner = tests_runner::TestRunner::new(&());
+        tests_runner.add_test(group_1);
+        tests_runner.add_test(group_2);
+
+        let result = tests_runner.run();
+
+        let expected_1 = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Passed,
+            },
+            TestResult {
+                status: TestStatus::Passed,
+            },
+        ]);
+
+        let expected_2 = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Passed,
+            },
+            TestResult {
+                status: TestStatus::Passed,
+            },
+        ]);
+
+        assert_eq!(result, vec![expected_1, expected_2]);
+    }
+
+    #[test]
+    fn test_group_with_failed_critical_test() {
+        let group = test_group!(
+            critical:
+                test!(
+                    critical:
+                    |_data| {
+                        TestResult {
+                            status: TestStatus::Failed,
+                        }
+                    }
+                ),
+            test!(
+                critical:
+                |_data| {
+                    TestResult {
+                        status: TestStatus::Passed,
+                    }
+                }
+            )
+        );
+
+        let mut tests_runner = tests_runner::TestRunner::new(&());
+        tests_runner.add_test(group);
+
+        let result = tests_runner.run();
+
+        let expected = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Failed,
+            },
+            TestResult {
+                status: TestStatus::Aborted,
+            },
+        ]);
+
+        assert_eq!(result, vec![expected]);
+    }
+
+    #[test]
+
+    fn normal_multigroups_with_failed_critical_test() {
+        let group_1 = test_group!(
+            normal:
+                test!(
+                    critical:
+                    |_data| {
+                        TestResult {
+                            status: TestStatus::Failed,
+                        }
+                    }
+                ),
+            test!(
+                critical:
+                |_data| {
+                    TestResult {
+                        status: TestStatus::Passed,
+                    }
+                }
+            )
+        );
+
+        let group_2 = group_1.clone();
+
+        let mut tests_runner = tests_runner::TestRunner::new(&());
+
+        tests_runner.add_test(group_1);
+        tests_runner.add_test(group_2);
+
+        let result = tests_runner.run();
+
+        let expected_1 = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Failed,
+            },
+            TestResult {
+                status: TestStatus::Aborted,
+            },
+        ]);
+
+        // The second group runs because the first group is normal
+        let expected_2 = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Failed,
+            },
+            TestResult {
+                status: TestStatus::Aborted,
+            },
+        ]);
+
+        assert_eq!(result, vec![expected_1, expected_2]);
+    }
+
+    #[test]
+    fn critical_multigroups_with_failed_critical_test() {
+        let group_1 = test_group!(
+            critical:
+                test!(
+                    critical:
+                    |_data| {
+                        TestResult {
+                            status: TestStatus::Failed,
+                        }
+                    }
+                ),
+            test!(
+                critical:
+                |_data| {
+                    TestResult {
+                        status: TestStatus::Passed,
+                    }
+                }
+            )
+        );
+
+        let group_2 = group_1.clone();
+
+        let mut tests_runner = tests_runner::TestRunner::new(&());
+
+        tests_runner.add_test(group_1);
+        tests_runner.add_test(group_2);
+
+        let result = tests_runner.run();
+
+        let expected_1 = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Failed,
+            },
+            TestResult {
+                status: TestStatus::Aborted,
+            },
+        ]);
+
+        // The second group is not run because the first group is critical and failed
+        let expected_2 = RunResult::GroupResult(vec![
+            TestResult {
+                status: TestStatus::Aborted,
+            },
+            TestResult {
+                status: TestStatus::Aborted,
+            },
+        ]);
+
+        assert_eq!(result, vec![expected_1, expected_2]);
     }
 }

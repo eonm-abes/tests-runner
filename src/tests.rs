@@ -1,16 +1,16 @@
-use std::fmt::Debug;
 use crate::tests_runner::RunResult;
+use std::fmt::Debug;
 
 #[macro_export]
 macro_rules! test {
-    (critical, $($cb:expr)*) => {
-        Box::new(Test::new(Criticality::Critical, $($cb)*))
+    (critical: $($cb:expr)*) => {
+        Box::new(Test::new(crate::tests::Criticality::Critical, $($cb)*))
     };
-    (normal, $($cb:expr)*) => {
-        Box::new(Test::new(Criticality::Normal, $($cb)*))
+    (normal: $($cb:expr)*) => {
+        Box::new(Test::new(crate::tests::Criticality::Normal, $($cb)*))
     };
-    ($cb:expr) => {
-        Box::new(Test::new(Criticality::default(), $cb))
+    ($($cb:expr)*) => {
+        Box::new(Test::new(crate::tests::Criticality::Normal, $($cb)*))
     };
 }
 
@@ -18,15 +18,15 @@ macro_rules! test {
 /// A test
 pub struct Test<T> {
     pub result: Option<RunResult>,
-    pub level: Criticality,
+    pub criticality: Criticality,
     pub cb: fn(&T) -> TestResult,
 }
 
 impl<T> Test<T> {
-    pub fn new(level: Criticality, cb: fn(&T) -> TestResult) -> Test<T> {
+    pub fn new(criticality: Criticality, cb: fn(&T) -> TestResult) -> Test<T> {
         Test {
             result: None,
-            level,
+            criticality,
             cb,
         }
     }
@@ -36,8 +36,8 @@ impl<T> Debug for Test<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Test {{ level: {:?}, result: {:?} }}",
-            self.level, self.result
+            "Test {{ criticality: {:?}, result: {:?} }}",
+            self.criticality, self.result
         )
     }
 }
@@ -47,16 +47,14 @@ pub struct TestResult {
     pub status: TestStatus,
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TestStatus {
     Passed,
     Failed,
-    Skipped,
     Aborted,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Represents the Criticality of a test or a group of tests
 pub enum Criticality {
     // If a critical test fails, the test suite is aborted
@@ -76,6 +74,11 @@ pub trait TestTrait<T> {
     fn set_status(&mut self, issue: TestStatus);
     fn status(&self) -> Option<TestStatus>;
     fn result(&self) -> Option<RunResult>;
+    fn should_abort(&self) -> bool {
+        self.criticality() == Criticality::Critical
+            && (self.status() == Some(TestStatus::Failed)
+                || self.status() == Some(TestStatus::Aborted))
+    }
 }
 
 impl<T> TestTrait<T> for Test<T> {
@@ -86,23 +89,23 @@ impl<T> TestTrait<T> for Test<T> {
         RunResult::TestResult(result)
     }
 
+    /// Returns the Criticality of the test
     fn criticality(&self) -> Criticality {
-        self.level
+        self.criticality
     }
 
-    fn set_status(&mut self, issue: TestStatus) {
-        self.result = Some(RunResult::TestResult(TestResult { status: issue }));
+    /// Sets the status of the test
+    fn set_status(&mut self, status: TestStatus) {
+        self.result = Some(RunResult::TestResult(TestResult { status }));
     }
 
+    /// Gets the result of the test
     fn result(&self) -> Option<RunResult> {
         self.result.clone()
     }
 
+    /// Gets the status of the test
     fn status(&self) -> Option<TestStatus> {
-        self.result
-            .as_ref()
-            .map(|r| r.status())
-            .flatten()
+        self.result.as_ref().and_then(|r| r.status())
     }
-    
 }
