@@ -43,12 +43,14 @@ impl<T> Debug for Test<T> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A test result
 pub struct TestResult {
-    pub status: TestStatus,
+    pub status: Status,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TestStatus {
+/// Represents the status of a test or a group of tests
+pub enum Status {
     Passed,
     Failed,
     Aborted,
@@ -71,13 +73,13 @@ impl Default for Criticality {
 pub trait TestTrait<T> {
     fn run(&mut self, data: &T) -> RunResult;
     fn criticality(&self) -> Criticality;
-    fn set_status(&mut self, issue: TestStatus);
-    fn status(&self) -> Option<TestStatus>;
+    fn set_status(&mut self, issue: Status);
+    fn status(&self) -> Option<Status>;
     fn result(&self) -> Option<RunResult>;
     fn should_abort(&self) -> bool {
         self.criticality() == Criticality::Critical
-            && (self.status() == Some(TestStatus::Failed)
-                || self.status() == Some(TestStatus::Aborted))
+            && (self.status() == Some(Status::Failed)
+                || self.status() == Some(Status::Aborted))
     }
 }
 
@@ -95,7 +97,7 @@ impl<T> TestTrait<T> for Test<T> {
     }
 
     /// Sets the status of the test
-    fn set_status(&mut self, status: TestStatus) {
+    fn set_status(&mut self, status: Status) {
         self.result = Some(RunResult::TestResult(TestResult { status }));
     }
 
@@ -105,7 +107,7 @@ impl<T> TestTrait<T> for Test<T> {
     }
 
     /// Gets the status of the test
-    fn status(&self) -> Option<TestStatus> {
+    fn status(&self) -> Option<Status> {
         self.result.as_ref().and_then(|r| r.status())
     }
 }

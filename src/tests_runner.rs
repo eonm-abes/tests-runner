@@ -1,4 +1,4 @@
-use crate::tests::{TestResult, TestStatus, TestTrait};
+use crate::tests::{TestResult, Status, TestTrait};
 
 /// Run tests or tests groups
 pub struct TestRunner<'a, T> {
@@ -26,7 +26,7 @@ impl<'a, T> TestRunner<'a, T> {
                 test.run(self.data);
                 abort = test.should_abort();
             } else {
-                test.set_status(TestStatus::Aborted);
+                test.set_status(Status::Aborted);
             }
         }
 
@@ -41,16 +41,16 @@ pub enum RunResult {
 }
 
 impl RunResult {
-    pub fn status(&self) -> Option<TestStatus> {
+    pub fn status(&self) -> Option<Status> {
         match self {
             RunResult::TestResult(result) => Some(result.status.clone()),
             RunResult::GroupResult(results) => {
-                if results.iter().all(|r| r.status == TestStatus::Passed) {
-                    Some(TestStatus::Passed)
-                } else if results.iter().any(|r| r.status == TestStatus::Aborted) {
-                    Some(TestStatus::Aborted)
-                } else if results.iter().any(|r| r.status == TestStatus::Failed) {
-                    Some(TestStatus::Failed)
+                if results.iter().all(|r| r.status == Status::Passed) {
+                    Some(Status::Passed)
+                } else if results.iter().any(|r| r.status == Status::Aborted) {
+                    Some(Status::Aborted)
+                } else if results.iter().any(|r| r.status == Status::Failed) {
+                    Some(Status::Failed)
                 } else {
                     None
                 }
@@ -76,7 +76,7 @@ mod tests_runner {
             critical:
             |_| {
                 TestResult {
-                    status: TestStatus::Passed,
+                    status: Status::Passed,
                 }
             }
         };
@@ -95,7 +95,7 @@ mod tests_runner {
             critical:
             |_| {
                 TestResult {
-                    status: TestStatus::Passed,
+                    status: Status::Passed,
                 }
             }
         };
@@ -104,7 +104,7 @@ mod tests_runner {
             critical:
             |_| {
                 TestResult {
-                    status: TestStatus::Passed,
+                    status: Status::Passed,
                 }
             }
         };
@@ -127,7 +127,7 @@ mod tests_runner {
                     critical:
                     |_| {
                         TestResult {
-                            status: TestStatus::Passed,
+                            status: Status::Passed,
                         }
                     }
                 ),
@@ -135,7 +135,7 @@ mod tests_runner {
                 critical:
                 |_| {
                     TestResult {
-                        status: TestStatus::Passed,
+                        status: Status::Passed,
                     }
                 }
             )
@@ -157,7 +157,7 @@ mod tests_runner {
                     critical:
                     |_| {
                         TestResult {
-                            status: TestStatus::Passed,
+                            status: Status::Passed,
                         }
                     }
                 ),
@@ -165,7 +165,7 @@ mod tests_runner {
                 critical:
                 |_| {
                     TestResult {
-                        status: TestStatus::Passed,
+                        status: Status::Passed,
                     }
                 }
             )
@@ -188,7 +188,7 @@ mod tests_runner {
                     critical:
                     |_| {
                         TestResult {
-                            status: TestStatus::Passed,
+                            status: Status::Passed,
                         }
                     }
                 ),
@@ -196,7 +196,7 @@ mod tests_runner {
                 critical:
                 |_| {
                     TestResult {
-                        status: TestStatus::Passed,
+                        status: Status::Passed,
                     }
                 }
             )
@@ -206,7 +206,7 @@ mod tests_runner {
             critical:
             |_| {
                 TestResult {
-                    status: TestStatus::Passed,
+                    status: Status::Passed,
                 }
             }
         };
