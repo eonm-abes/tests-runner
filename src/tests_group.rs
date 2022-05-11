@@ -7,16 +7,16 @@ use crate::{RunResult, TestResult};
 #[macro_export]
 macro_rules! test_group {
     (normal: $($test:expr),*) => {
-        test_group!(crate::tests::Criticality::Normal => $($test),*)
+        test_group!($crate::Criticality::Normal => $($test),*)
     };
 
     (critical: $($test:expr),*) => {
-        test_group!(crate::tests::Criticality::Critical => $($test),*)
+        test_group!($crate::Criticality::Critical => $($test),*)
     };
 
     ($criticality:expr => $($test:expr),*) => {
         {
-            let mut group = crate::tests_group::TestGroup::new($criticality);
+            let mut group = $crate::TestGroup::new($criticality);
 
             $(
                 group.add_test(*$test);

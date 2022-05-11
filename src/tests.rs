@@ -4,13 +4,13 @@ use std::fmt::Debug;
 #[macro_export]
 macro_rules! test {
     (critical: $($cb:expr)*) => {
-        Box::new(Test::new(crate::tests::Criticality::Critical, $($cb)*))
+        Box::new(Test::new($crate::Criticality::Critical, $($cb)*))
     };
     (normal: $($cb:expr)*) => {
-        Box::new(Test::new(crate::tests::Criticality::Normal, $($cb)*))
+        Box::new(Test::new($crate::Criticality::Normal, $($cb)*))
     };
     ($($cb:expr)*) => {
-        Box::new(Test::new(crate::tests::Criticality::Normal, $($cb)*))
+        Box::new(Test::new($crate::Criticality::Normal, $($cb)*))
     };
 }
 
