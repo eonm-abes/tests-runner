@@ -70,8 +70,12 @@ impl Default for Criticality {
     }
 }
 
-pub trait TestTrait<T> {
-    fn run(&mut self, data: &T) -> RunResult;
+#[async_trait::async_trait]
+pub trait TestTrait<'a, T>
+where T: Sync + Send,
+Self: Send + 'a
+{
+    async fn run(&mut self, data: &mut T) -> RunResult;
     fn criticality(&self) -> Criticality;
     fn set_status(&mut self, issue: Status);
     fn status(&self) -> Option<Status>;
@@ -83,8 +87,12 @@ pub trait TestTrait<T> {
     }
 }
 
-impl<T> TestTrait<T> for Test<T> {
-    fn run(&mut self, data: &T) -> RunResult {
+#[async_trait::async_trait]
+impl<'a, T> TestTrait<'a, T> for Test<T>
+where T: Sync + Send,
+Self: Send + 'a
+{
+    async fn run(&mut self, data: &mut T) -> RunResult {
         let result = (self.cb)(data);
 
         self.result = Some(RunResult::TestResult(result.clone()));

@@ -1,29 +1,35 @@
 use crate::tests::{TestResult, Status, TestTrait};
 
 /// Run tests or tests groups
-pub struct TestRunner<'a, T> {
-    tests: Vec<Box<dyn TestTrait<T>>>,
-    data: &'a T,
+pub struct TestRunner<'a, T>
+where T: Sync + Send,
+Self: Send + 'a
+{
+    tests: Vec<Box<dyn TestTrait<'a, T>>>,
+    data: &'a mut T,
 }
 
-impl<'a, T> TestRunner<'a, T> {
-    pub fn new(data: &T) -> TestRunner<T> {
+impl<'a, T> TestRunner<'a, T>
+where T: Sync + Send,
+Self: Send + 'a
+{
+    pub fn new(data: &'a mut T) -> TestRunner<T> {
         TestRunner {
             tests: Vec::new(),
             data,
         }
     }
 
-    pub fn add_test(&mut self, test: Box<dyn TestTrait<T>>) {
+    pub fn add_test(&mut self, test: Box<dyn TestTrait<'a, T>>) {
         self.tests.push(test);
     }
 
-    pub fn run(&mut self) -> Vec<RunResult> {
+    pub async fn run(&mut self) -> Vec<RunResult> {
         let mut abort = false;
 
         for test in &mut self.tests {
             if !abort {
-                test.run(self.data);
+                test.run(self.data).await;
                 abort = test.should_abort();
             } else {
                 test.set_status(Status::Aborted);
@@ -68,9 +74,10 @@ mod tests_runner {
     use crate::tests::Test;
     
 
-    #[test]
-    fn test_runner_should_run_tests() {
-        let mut runner = TestRunner::new(&());
+    #[tokio::test]
+    async fn test_runner_should_run_tests() {
+        let mut data = ();
+        let mut runner = TestRunner::new(&mut data);
 
         let t = test! {
             critical:
@@ -82,14 +89,15 @@ mod tests_runner {
         };
         runner.add_test(t);
 
-        let result = runner.run();
+        let result = runner.run().await;
 
         assert_eq!(result.len(), 1);
     }
 
-    #[test]
-    fn test_runner_should_run_multiple_tests() {
-        let mut runner = TestRunner::new(&());
+    #[tokio::test]
+    async fn test_runner_should_run_multiple_tests() {
+        let mut data = ();
+        let mut runner = TestRunner::new(&mut data);
 
         let t1 = test! {
             critical:
@@ -112,14 +120,15 @@ mod tests_runner {
         runner.add_test(t1);
         runner.add_test(t2);
 
-        let result = runner.run();
+        let result = runner.run().await;
 
         assert_eq!(result.len(), 2);
     }
 
-    #[test]
-    fn test_runner_should_run_group() {
-        let mut runner = TestRunner::new(&());
+    #[tokio::test]
+    async fn test_runner_should_run_group() {
+        let mut data = ();
+        let mut runner = TestRunner::new(&mut data);
 
         let group = test_group!(
             normal:
@@ -143,13 +152,14 @@ mod tests_runner {
 
         runner.add_test(group);
 
-        let result = runner.run();
+        let result = runner.run().await;
         assert_eq!(result.len(), 1);
     }
 
-    #[test]
-    fn test_runner_should_run_multiple_groups() {
-        let mut runner = TestRunner::new(&());
+    #[tokio::test]
+    async fn test_runner_should_run_multiple_groups() {
+        let mut data = ();
+        let mut runner = TestRunner::new(&mut data);
 
         let group = test_group!(
             normal:
@@ -174,13 +184,14 @@ mod tests_runner {
         runner.add_test(group.clone());
         runner.add_test(group);
 
-        let result = runner.run();
+        let result = runner.run().await;
         assert_eq!(result.len(), 2);
     }
 
-    #[test]
-    fn test_should_run_mix_of_tests_and_groups() {
-        let mut runner = TestRunner::new(&());
+    #[tokio::test]
+    async fn test_should_run_mix_of_tests_and_groups() {
+        let mut data = ();
+        let mut runner = TestRunner::new(&mut data);
 
         let group = test_group!(
             normal:
@@ -214,7 +225,7 @@ mod tests_runner {
         runner.add_test(group);
         runner.add_test(t);
 
-        let result = runner.run();
+        let result = runner.run().await;
         assert_eq!(result.len(), 2);
     }
 }

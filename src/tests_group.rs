@@ -29,13 +29,15 @@ macro_rules! test_group {
 
 #[derive(Debug, Clone)]
 /// A group of tests
-pub struct TestGroup<T> {
+pub struct TestGroup<T> 
+{
     tests: Vec<Test<T>>,
     criticality: Criticality,
     result: Option<RunResult>,
 }
 
-impl<T> TestGroup<T> {
+impl<T> TestGroup<T> 
+{
     pub fn new(criticality: Criticality) -> TestGroup<T> {
         TestGroup {
             tests: Vec::new(),
@@ -49,8 +51,12 @@ impl<T> TestGroup<T> {
     }
 }
 
-impl<T: Clone + 'static> TestTrait<T> for TestGroup<T> {
-    fn run(&mut self, data: &T) -> RunResult {
+#[async_trait::async_trait]
+impl<'a, T: Clone> TestTrait<'a, T> for TestGroup<T>
+where T: Sync + Send,
+Self: Send + 'a,
+{
+    async fn run(&mut self, data: &mut T) -> RunResult {
         let mut tests_runner = tests_runner::TestRunner::new(data);
 
         for test in &self.tests {
@@ -58,7 +64,7 @@ impl<T: Clone + 'static> TestTrait<T> for TestGroup<T> {
             tests_runner.add_test(Box::new(test));
         }
 
-        let runner_results = tests_runner.run();
+        let runner_results = tests_runner.run().await;
 
         let mut results = Vec::new();
 
@@ -104,8 +110,8 @@ mod tests {
     use super::*;
     use crate::test;
 
-    #[test]
-    fn test_single_group_run() {
+    #[tokio::test]
+    async fn test_single_group_run() {
         let group = test_group!(
             normal:
                 test!(
@@ -126,10 +132,10 @@ mod tests {
             )
         );
 
-        let mut tests_runner = tests_runner::TestRunner::new(&());
+        let mut data = ();
+        let mut tests_runner = tests_runner::TestRunner::new(&mut data);
         tests_runner.add_test(group);
-
-        let result = tests_runner.run();
+        let result = tests_runner.run().await;
 
         let expected = RunResult::GroupResult(vec![
             TestResult {
@@ -143,8 +149,8 @@ mod tests {
         assert_eq!(result, vec![expected]);
     }
 
-    #[test]
-    fn test_multiple_groups_run() {
+    #[tokio::test]
+    async fn test_multiple_groups_run() {
         let group_1 = test_group!(
             normal:
                 test!(
@@ -167,11 +173,13 @@ mod tests {
 
         let group_2 = group_1.clone();
 
-        let mut tests_runner = tests_runner::TestRunner::new(&());
+        let mut data = ();
+        let mut tests_runner = tests_runner::TestRunner::new(&mut data);
+
         tests_runner.add_test(group_1);
         tests_runner.add_test(group_2);
 
-        let result = tests_runner.run();
+        let result = tests_runner.run().await;
 
         let expected_1 = RunResult::GroupResult(vec![
             TestResult {
@@ -194,8 +202,8 @@ mod tests {
         assert_eq!(result, vec![expected_1, expected_2]);
     }
 
-    #[test]
-    fn test_group_with_failed_critical_test() {
+    #[tokio::test]
+    async fn test_group_with_failed_critical_test() {
         let group = test_group!(
             critical:
                 test!(
@@ -216,10 +224,12 @@ mod tests {
             )
         );
 
-        let mut tests_runner = tests_runner::TestRunner::new(&());
+        let mut data = ();
+        let mut tests_runner = tests_runner::TestRunner::new(&mut data);
+
         tests_runner.add_test(group);
 
-        let result = tests_runner.run();
+        let result = tests_runner.run().await;
 
         let expected = RunResult::GroupResult(vec![
             TestResult {
@@ -233,8 +243,8 @@ mod tests {
         assert_eq!(result, vec![expected]);
     }
 
-    #[test]
-
+    #[tokio::test]
+async 
     fn normal_multigroups_with_failed_critical_test() {
         let group_1 = test_group!(
             normal:
@@ -258,12 +268,13 @@ mod tests {
 
         let group_2 = group_1.clone();
 
-        let mut tests_runner = tests_runner::TestRunner::new(&());
+        let mut data = ();
+        let mut tests_runner = tests_runner::TestRunner::new(&mut data);
 
         tests_runner.add_test(group_1);
         tests_runner.add_test(group_2);
 
-        let result = tests_runner.run();
+        let result = tests_runner.run().await;
 
         let expected_1 = RunResult::GroupResult(vec![
             TestResult {
@@ -287,8 +298,8 @@ mod tests {
         assert_eq!(result, vec![expected_1, expected_2]);
     }
 
-    #[test]
-    fn critical_multigroups_with_failed_critical_test() {
+    #[tokio::test]
+    async fn critical_multigroups_with_failed_critical_test() {
         let group_1 = test_group!(
             critical:
                 test!(
@@ -311,12 +322,13 @@ mod tests {
 
         let group_2 = group_1.clone();
 
-        let mut tests_runner = tests_runner::TestRunner::new(&());
+        let mut data = ();
+        let mut tests_runner = tests_runner::TestRunner::new(&mut data);
 
         tests_runner.add_test(group_1);
         tests_runner.add_test(group_2);
 
-        let result = tests_runner.run();
+        let result = tests_runner.run().await;
 
         let expected_1 = RunResult::GroupResult(vec![
             TestResult {
