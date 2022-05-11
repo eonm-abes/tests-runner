@@ -19,11 +19,11 @@ macro_rules! test {
 pub struct Test<T> {
     pub result: Option<RunResult>,
     pub criticality: Criticality,
-    pub cb: fn(&T) -> TestResult,
+    pub cb: fn(&mut T) -> TestResult,
 }
 
 impl<T> Test<T> {
-    pub fn new(criticality: Criticality, cb: fn(&T) -> TestResult) -> Test<T> {
+    pub fn new(criticality: Criticality, cb: fn(&mut T) -> TestResult) -> Test<T> {
         Test {
             result: None,
             criticality,
