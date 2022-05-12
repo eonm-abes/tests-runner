@@ -6,7 +6,7 @@ macro_rules! test {
     ($name:literal[critical]: $($cb:expr)*) => {
         Box::new(Test::new($name,$crate::Criticality::Critical, $($cb)*))
     };
-    ($name:literal, normal: $($cb:expr)*) => {
+    ($name:literal[normal]: $($cb:expr)*) => {
         Box::new(Test::new($crate::Criticality::Normal, $($cb)*))
     };
     ($name:literal, $($cb:expr)*) => {
