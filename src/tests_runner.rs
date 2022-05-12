@@ -1,17 +1,19 @@
-use crate::tests::{TestResult, Status, TestTrait};
+use crate::tests::{Status, TestResult, TestTrait};
 
 /// Run tests or tests groups
 pub struct TestRunner<'a, T>
-where T: Sync + Send,
-Self: Send + 'a
+where
+    T: Sync + Send,
+    Self: Send + 'a,
 {
     tests: Vec<Box<dyn TestTrait<'a, T>>>,
     data: &'a mut T,
 }
 
 impl<'a, T> TestRunner<'a, T>
-where T: Sync + Send,
-Self: Send + 'a
+where
+    T: Sync + Send,
+    Self: Send + 'a,
 {
     pub fn new(data: &'a mut T) -> TestRunner<T> {
         TestRunner {
@@ -72,7 +74,6 @@ mod tests_runner {
     use crate::test;
     use crate::test_group;
     use crate::tests::Test;
-    
 
     #[tokio::test]
     async fn test_runner_should_run_tests() {
@@ -80,7 +81,7 @@ mod tests_runner {
         let mut runner = TestRunner::new(&mut data);
 
         let t = test! {
-            critical:
+            "test_name"[critical]:
             |_| {
                 TestResult {
                     status: Status::Passed,
@@ -100,7 +101,7 @@ mod tests_runner {
         let mut runner = TestRunner::new(&mut data);
 
         let t1 = test! {
-            critical:
+            "test_name"[critical]:
             |_| {
                 TestResult {
                     status: Status::Passed,
@@ -109,7 +110,7 @@ mod tests_runner {
         };
 
         let t2 = test! {
-            critical:
+            "test_name"[critical]:
             |_| {
                 TestResult {
                     status: Status::Passed,
@@ -133,7 +134,7 @@ mod tests_runner {
         let group = test_group!(
             normal:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_| {
                         TestResult {
                             status: Status::Passed,
@@ -141,7 +142,7 @@ mod tests_runner {
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_| {
                     TestResult {
                         status: Status::Passed,
@@ -164,7 +165,7 @@ mod tests_runner {
         let group = test_group!(
             normal:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_| {
                         TestResult {
                             status: Status::Passed,
@@ -172,7 +173,7 @@ mod tests_runner {
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_| {
                     TestResult {
                         status: Status::Passed,
@@ -196,7 +197,7 @@ mod tests_runner {
         let group = test_group!(
             normal:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_| {
                         TestResult {
                             status: Status::Passed,
@@ -204,7 +205,7 @@ mod tests_runner {
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_| {
                     TestResult {
                         status: Status::Passed,
@@ -214,7 +215,7 @@ mod tests_runner {
         );
 
         let t = test! {
-            critical:
+            "test_name"[critical]:
             |_| {
                 TestResult {
                     status: Status::Passed,

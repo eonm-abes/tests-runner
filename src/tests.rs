@@ -3,14 +3,14 @@ use std::fmt::Debug;
 
 #[macro_export]
 macro_rules! test {
-    (critical: $($cb:expr)*) => {
-        Box::new(Test::new($crate::Criticality::Critical, $($cb)*))
+    ($name:literal[critical]: $($cb:expr)*) => {
+        Box::new(Test::new($name,$crate::Criticality::Critical, $($cb)*))
     };
-    (normal: $($cb:expr)*) => {
+    ($name:literal, normal: $($cb:expr)*) => {
         Box::new(Test::new($crate::Criticality::Normal, $($cb)*))
     };
-    ($($cb:expr)*) => {
-        Box::new(Test::new($crate::Criticality::Normal, $($cb)*))
+    ($name:literal, $($cb:expr)*) => {
+        Box::new(Test::new($name, $crate::Criticality::Normal, $($cb)*))
     };
 }
 
@@ -18,13 +18,19 @@ macro_rules! test {
 /// A test
 pub struct Test<T> {
     pub result: Option<RunResult>,
+    pub name: String,
     pub criticality: Criticality,
     pub cb: fn(&mut T) -> TestResult,
 }
 
 impl<T> Test<T> {
-    pub fn new(criticality: Criticality, cb: fn(&mut T) -> TestResult) -> Test<T> {
+    pub fn new<S: Into<String>>(
+        name: S,
+        criticality: Criticality,
+        cb: fn(&mut T) -> TestResult,
+    ) -> Test<T> {
         Test {
+            name: name.into(),
             result: None,
             criticality,
             cb,
@@ -36,8 +42,8 @@ impl<T> Debug for Test<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Test {{ criticality: {:?}, result: {:?} }}",
-            self.criticality, self.result
+            "Test {{ name: {}, criticality: {:?}, result: {:?} }}",
+            self.name, self.criticality, self.result
         )
     }
 }
@@ -72,8 +78,9 @@ impl Default for Criticality {
 
 #[async_trait::async_trait]
 pub trait TestTrait<'a, T>
-where T: Sync + Send,
-Self: Send + 'a
+where
+    T: Sync + Send,
+    Self: Send + 'a,
 {
     async fn run(&mut self, data: &mut T) -> RunResult;
     fn criticality(&self) -> Criticality;
@@ -82,15 +89,15 @@ Self: Send + 'a
     fn result(&self) -> Option<RunResult>;
     fn should_abort(&self) -> bool {
         self.criticality() == Criticality::Critical
-            && (self.status() == Some(Status::Failed)
-                || self.status() == Some(Status::Aborted))
+            && (self.status() == Some(Status::Failed) || self.status() == Some(Status::Aborted))
     }
 }
 
 #[async_trait::async_trait]
 impl<'a, T> TestTrait<'a, T> for Test<T>
-where T: Sync + Send,
-Self: Send + 'a
+where
+    T: Sync + Send,
+    Self: Send + 'a,
 {
     async fn run(&mut self, data: &mut T) -> RunResult {
         let result = (self.cb)(data);

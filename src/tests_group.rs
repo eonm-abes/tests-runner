@@ -1,5 +1,5 @@
 use crate::{
-    tests::{Criticality, Test, Status, TestTrait},
+    tests::{Criticality, Status, Test, TestTrait},
     tests_runner,
 };
 use crate::{RunResult, TestResult};
@@ -29,15 +29,13 @@ macro_rules! test_group {
 
 #[derive(Debug, Clone)]
 /// A group of tests
-pub struct TestGroup<T> 
-{
+pub struct TestGroup<T> {
     tests: Vec<Test<T>>,
     criticality: Criticality,
     result: Option<RunResult>,
 }
 
-impl<T> TestGroup<T> 
-{
+impl<T> TestGroup<T> {
     pub fn new(criticality: Criticality) -> TestGroup<T> {
         TestGroup {
             tests: Vec::new(),
@@ -53,8 +51,9 @@ impl<T> TestGroup<T>
 
 #[async_trait::async_trait]
 impl<'a, T: Clone> TestTrait<'a, T> for TestGroup<T>
-where T: Sync + Send,
-Self: Send + 'a,
+where
+    T: Sync + Send,
+    Self: Send + 'a,
 {
     async fn run(&mut self, data: &mut T) -> RunResult {
         let mut tests_runner = tests_runner::TestRunner::new(data);
@@ -115,7 +114,7 @@ mod tests {
         let group = test_group!(
             normal:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_data| {
                         TestResult {
                             status: Status::Passed,
@@ -123,7 +122,7 @@ mod tests {
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_data| {
                     TestResult {
                         status: Status::Passed,
@@ -154,7 +153,7 @@ mod tests {
         let group_1 = test_group!(
             normal:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_data| {
                         TestResult {
                             status: Status::Passed,
@@ -162,7 +161,7 @@ mod tests {
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_data| {
                     TestResult {
                         status: Status::Passed,
@@ -207,7 +206,7 @@ mod tests {
         let group = test_group!(
             critical:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_data| {
                         TestResult {
                             status: Status::Failed,
@@ -215,7 +214,7 @@ mod tests {
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_data| {
                     TestResult {
                         status: Status::Passed,
@@ -244,12 +243,11 @@ mod tests {
     }
 
     #[tokio::test]
-async 
-    fn normal_multigroups_with_failed_critical_test() {
+    async fn normal_multigroups_with_failed_critical_test() {
         let group_1 = test_group!(
             normal:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_data| {
                         TestResult {
                             status: Status::Failed,
@@ -257,7 +255,7 @@ async
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_data| {
                     TestResult {
                         status: Status::Passed,
@@ -303,7 +301,7 @@ async
         let group_1 = test_group!(
             critical:
                 test!(
-                    critical:
+                    "test_name"[critical]:
                     |_data| {
                         TestResult {
                             status: Status::Failed,
@@ -311,7 +309,7 @@ async
                     }
                 ),
             test!(
-                critical:
+                "test_name"[critical]:
                 |_data| {
                     TestResult {
                         status: Status::Passed,
