@@ -1,5 +1,7 @@
 use crate::tests::{Status, TestResult, TestTrait};
 
+use serde::Serialize;
+
 /// Run tests or tests groups
 pub struct TestRunner<'a, T>
 where
@@ -42,7 +44,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum RunResult {
     TestResult(TestResult),
     GroupResult(Vec<TestResult>),
@@ -83,9 +85,7 @@ mod tests_runner {
         let t = test! {
             "test_name"[critical]:
             |_| {
-                TestResult {
-                    status: Status::Passed,
-                }
+                Status::Passed
             }
         };
         runner.add_test(t);
@@ -103,18 +103,14 @@ mod tests_runner {
         let t1 = test! {
             "test_name"[critical]:
             |_| {
-                TestResult {
-                    status: Status::Passed,
-                }
+                Status::Passed
             }
         };
 
         let t2 = test! {
             "test_name"[critical]:
             |_| {
-                TestResult {
-                    status: Status::Passed,
-                }
+                Status::Passed
             }
         };
 
@@ -134,19 +130,15 @@ mod tests_runner {
         let group = test_group!(
             normal:
                 test!(
-                    "test_name"[critical]:
-                    |_| {
-                        TestResult {
-                            status: Status::Passed,
-                        }
-                    }
-                ),
+                                    "test_name"[critical]:
+                                    |_| {
+                Status::Passed
+                                    }
+                                ),
             test!(
                 "test_name"[critical]:
                 |_| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -167,17 +159,13 @@ mod tests_runner {
                 test!(
                     "test_name"[critical]:
                     |_| {
-                        TestResult {
-                            status: Status::Passed,
-                        }
+                        Status::Passed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -199,17 +187,13 @@ mod tests_runner {
                 test!(
                     "test_name"[critical]:
                     |_| {
-                        TestResult {
-                            status: Status::Passed,
-                        }
+                        Status::Passed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -217,9 +201,7 @@ mod tests_runner {
         let t = test! {
             "test_name"[critical]:
             |_| {
-                TestResult {
-                    status: Status::Passed,
-                }
+                Status::Passed
             }
         };
 

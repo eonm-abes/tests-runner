@@ -87,7 +87,9 @@ where
             self.tests
                 .clone()
                 .into_iter()
-                .map(|_t| TestResult {
+                .map(|t| TestResult {
+                    criticality: t.criticality,
+                    name: t.name,
                     status: status.clone(),
                 })
                 .collect(),
@@ -116,17 +118,13 @@ mod tests {
                 test!(
                     "test_name"[critical]:
                     |_data| {
-                        TestResult {
-                            status: Status::Passed,
-                        }
+                        Status::Passed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_data| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -138,9 +136,13 @@ mod tests {
 
         let expected = RunResult::GroupResult(vec![
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Passed,
             },
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Passed,
             },
         ]);
@@ -154,18 +156,14 @@ mod tests {
             normal:
                 test!(
                     "test_name"[critical]:
-                    |_data| {
-                        TestResult {
-                            status: Status::Passed,
-                        }
+                    |_data| {                        
+                        Status::Passed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_data| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -182,21 +180,18 @@ mod tests {
 
         let expected_1 = RunResult::GroupResult(vec![
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Passed,
             },
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Passed,
             },
         ]);
 
-        let expected_2 = RunResult::GroupResult(vec![
-            TestResult {
-                status: Status::Passed,
-            },
-            TestResult {
-                status: Status::Passed,
-            },
-        ]);
+        let expected_2 = expected_1.clone();
 
         assert_eq!(result, vec![expected_1, expected_2]);
     }
@@ -208,17 +203,13 @@ mod tests {
                 test!(
                     "test_name"[critical]:
                     |_data| {
-                        TestResult {
-                            status: Status::Failed,
-                        }
+                        Status::Failed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_data| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -232,9 +223,13 @@ mod tests {
 
         let expected = RunResult::GroupResult(vec![
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Failed,
             },
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Aborted,
             },
         ]);
@@ -249,17 +244,13 @@ mod tests {
                 test!(
                     "test_name"[critical]:
                     |_data| {
-                        TestResult {
-                            status: Status::Failed,
-                        }
+                        Status::Failed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_data| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -276,22 +267,19 @@ mod tests {
 
         let expected_1 = RunResult::GroupResult(vec![
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Failed,
             },
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Aborted,
             },
         ]);
 
         // The second group runs because the first group is normal
-        let expected_2 = RunResult::GroupResult(vec![
-            TestResult {
-                status: Status::Failed,
-            },
-            TestResult {
-                status: Status::Aborted,
-            },
-        ]);
+        let expected_2 = expected_1.clone();
 
         assert_eq!(result, vec![expected_1, expected_2]);
     }
@@ -303,17 +291,13 @@ mod tests {
                 test!(
                     "test_name"[critical]:
                     |_data| {
-                        TestResult {
-                            status: Status::Failed,
-                        }
+                        Status::Failed
                     }
                 ),
             test!(
                 "test_name"[critical]:
                 |_data| {
-                    TestResult {
-                        status: Status::Passed,
-                    }
+                    Status::Passed
                 }
             )
         );
@@ -330,9 +314,13 @@ mod tests {
 
         let expected_1 = RunResult::GroupResult(vec![
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Failed,
             },
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Aborted,
             },
         ]);
@@ -340,9 +328,13 @@ mod tests {
         // The second group is not run because the first group is critical and failed
         let expected_2 = RunResult::GroupResult(vec![
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Aborted,
             },
             TestResult {
+                criticality: Criticality::Critical,
+                name: "test_name".to_string(),
                 status: Status::Aborted,
             },
         ]);

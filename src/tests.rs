@@ -20,14 +20,14 @@ pub struct Test<T> {
     pub result: Option<RunResult>,
     pub name: String,
     pub criticality: Criticality,
-    pub cb: fn(&mut T) -> TestResult,
+    pub cb: fn(&mut T) -> Status,
 }
 
 impl<T> Test<T> {
     pub fn new<S: Into<String>>(
         name: S,
         criticality: Criticality,
-        cb: fn(&mut T) -> TestResult,
+        cb: fn(&mut T) -> Status,
     ) -> Test<T> {
         Test {
             name: name.into(),
@@ -48,13 +48,17 @@ impl<T> Debug for Test<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 /// A test result
 pub struct TestResult {
+    pub criticality: Criticality,
+    pub name: String,
     pub status: Status,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 /// Represents the status of a test or a group of tests
 pub enum Status {
     Passed,
@@ -62,7 +66,7 @@ pub enum Status {
     Aborted,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 /// Represents the Criticality of a test or a group of tests
 pub enum Criticality {
     // If a critical test fails, the test suite is aborted
@@ -100,10 +104,16 @@ where
     Self: Send + 'a,
 {
     async fn run(&mut self, data: &mut T) -> RunResult {
-        let result = (self.cb)(data);
+        let status = (self.cb)(data);
 
-        self.result = Some(RunResult::TestResult(result.clone()));
-        RunResult::TestResult(result)
+        let test_result = RunResult::TestResult(TestResult {
+            criticality: self.criticality,
+            name: self.name.clone(),
+            status,
+        });
+
+        self.result = Some(test_result.clone());
+        test_result
     }
 
     /// Returns the Criticality of the test
@@ -113,7 +123,11 @@ where
 
     /// Sets the status of the test
     fn set_status(&mut self, status: Status) {
-        self.result = Some(RunResult::TestResult(TestResult { status }));
+        self.result = Some(RunResult::TestResult(TestResult {
+            criticality: self.criticality,
+            name: self.name.clone(),
+            status,
+        }));
     }
 
     /// Gets the result of the test
